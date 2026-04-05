@@ -161,7 +161,7 @@
     "superagent": "^10.1.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
-    "undici": "^7.2.0",
+    "undici": "^8.0.2",
     "ky": "^1.7.0",
     "wretch": "^2.11.0",
     "make-fetch-happen": "^14.0.3",
