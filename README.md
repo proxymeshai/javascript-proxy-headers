@@ -1,3 +1,4 @@
+[![npm version](https://badge.fury.io/js/javascript-proxy-headers.svg)](https://badge.fury.io/js/javascript-proxy-headers)
 # JavaScript Proxy Headers
 
 Extensions for JavaScript HTTP libraries to support **sending and receiving custom proxy headers** during HTTPS CONNECT tunneling.
