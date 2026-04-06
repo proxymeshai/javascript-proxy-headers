@@ -11,16 +11,16 @@ on:
     workflows: [Release on merge]
     types: [completed]
 
-permissions:
-  contents: read
-  id-token: write
-
 jobs:
   publish:
     if: >-
       github.event_name != 'workflow_run' ||
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    # Explicit job permissions: org default token scopes must not block OIDC.
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -87,9 +87,18 @@ jobs:
         if: steps.gate.outputs.publish == 'true'
         run: npm install --ignore-scripts --no-package-lock
 
+      # If NODE_AUTH_TOKEN / NPM_TOKEN are set to empty or a placeholder (repo/org Variables,
+      # or setup-node + registry-url), npm prefers them over OIDC and fails with ENEEDAUTH.
       - name: Publish to npm
         if: steps.gate.outputs.publish == 'true'
-        run: npm publish --access public --provenance
+        run: |
+          set -euo pipefail
+          if [[ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]]; then
+            echo "::error::GitHub OIDC is unavailable (missing ACTIONS_ID_TOKEN_*). Check job permissions id-token: write and repo Settings → Actions → Workflow permissions."
+            exit 1
+          fi
+          unset NODE_AUTH_TOKEN NPM_TOKEN
+          npm publish --access public --provenance
 
       - name: Publish to JSR
         if: steps.gate.outputs.publish == 'true'
