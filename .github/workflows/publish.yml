@@ -46,22 +46,26 @@ jobs:
           fi
 
       # Omit registry-url: setup-node otherwise sets NODE_AUTH_TOKEN to a placeholder and npm publish uses that instead of OIDC.
+      # Node 24 ships npm 11.x (≥11.5.1 in current LTS line). Node 22’s npm is 10.x; Corepack `prepare npm@11` does not replace
+      # the toolcache `npm` binary on GitHub-hosted runners, so `npm publish` stayed on 10.x and OIDC trusted publishing never ran.
       - name: Setup Node
         if: steps.gate.outputs.publish == 'true'
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
-      # Corepack avoids `npm install -g npm` when the bundled global npm is broken (e.g. missing promise-retry).
-      - name: Upgrade npm for trusted publishing (OIDC)
+      - name: Assert npm supports trusted publishing (OIDC)
         if: steps.gate.outputs.publish == 'true'
-        env:
-          COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
         run: |
-          corepack enable
-          corepack prepare npm@11.5.1 --activate
-          npm --version
+          set -euo pipefail
+          ver="$(npm --version)"
+          echo "npm ${ver}"
+          node -e "
+          const v = process.argv[1].split('.').map(Number);
+          const ok = v[0] > 11 || (v[0] === 11 && (v[1] > 5 || (v[1] === 5 && (v[2] || 0) >= 1)));
+          if (!ok) { console.error('npm ' + process.argv[1] + ' < 11.5.1; trusted publishing OIDC requires npm >= 11.5.1'); process.exit(1); }
+          " "$ver"
 
       - name: Ensure versions match
         if: steps.gate.outputs.publish == 'true'
